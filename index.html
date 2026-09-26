@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CET 1 "Walter Cross Buchanan" - Infraestructura de Redes y Telecomunicaciones 3D</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- FontAwesome para iconografía técnica -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { margin: 0; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; background-color: #f1f5f9; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        /* Etiquetas 3D flotantes en HTML */
+        .tech-label {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid #cbd5e1;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #1e293b;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            pointer-events: none;
+            white-space: nowrap;
+            transition: opacity 0.2s ease;
+            z-index: 10;
+        }
+        .tech-label::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px 5px 0;
+            border-style: solid;
+            border-color: rgba(255, 255, 255, 0.92) transparent;
+            display: block;
+            width: 0;
+        }
+        .tech-label .badge {
+            display: inline-block;
+            padding: 1px 4px;
+            font-size: 9px;
+            border-radius: 3px;
+            color: white;
+            margin-left: 4px;
+        }
+        .badge-mdf { background-color: #2563eb; }
+        .badge-idf { background-color: #0d9488; }
+        .badge-fiber { background-color: #d97706; }
+        .badge-gov { background-color: #7c3aed; }
+        .badge-lib { background-color: #db2777; }
+        .badge-wifi { background-color: #059669; }
+
+        /* Custom scrollbar for panels */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="relative">
+
+    <!-- Canvas 3D de Three.js -->
+    <div id="canvas-container"></div>
+
+    <!-- Contenedor para etiquetas flotantes CSS -->
+    <div id="labels-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+    <!-- Título superior / Encabezado del Proyecto -->
+    <header class="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-slate-200 max-w-md">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 text-white p-2.5 rounded-lg shadow">
+                <i class="fa-solid fa-network-wired text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-sm font-bold text-slate-900">CET 1 "Walter Cross Buchanan" IPN</h1>
+                <p class="text-xs text-slate-600">Levantamiento de Redes y Telecomunicaciones 3D</p>
+            </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span><i class="fa-solid fa-server mr-1 text-blue-600"></i> MDF Edificio B</span>
+            <span><i class="fa-solid fa-wifi mr-1 text-emerald-600"></i> Cobertura Wi-Fi Activa</span>
+        </div>
+    </header>
+
+    <!-- Panel Lateral de Capas e Información Técnica -->
+    <aside class="absolute top-4 right-4 z-20 w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[calc(100vh-2rem)]">
+        <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-layer-group text-blue-400"></i>
+                <h2 class="font-semibold text-sm">Capas de Infraestructura</h2>
+            </div>
+            <span class="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-mono">CAT 6 / FO</span>
+        </div>
+
+        <div class="p-4 overflow-y-auto space-y-4 text-xs">
+            <!-- Selector de Capas -->
+            <div class="space-y-2">
+                <label class="text-slate-600 font-semibold block uppercase tracking-wider text-[10px]">Filtrar Capas de Red</label>
+                
+                <label class="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200 transition">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="layer-backbone" checked class="rounded text-blue-600 focus:ring-blue-500 h-4 w-4">
+                        <span class="font-medium text-slate-700">Backbone Fibra Óptica</span>
+                    </div>
+                    <span class="w-3 h-3 rounded-full bg-blue-600"></span>
+                </label>
+
+                <label class="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200 transition">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="layer-conduit" checked class="rounded text-amber-600 focus:ring-amber-500 h-4 w-4">
+                        <span class="font-medium text-slate-700">Conduit y Registros (2")</span>
+                    </div>
+                    <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                </label>
+
+                <label class="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200 transition">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="layer-wifi" checked class="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4">
+                        <span class="font-medium text-slate-700">Antenas y Cobertura Wi-Fi</span>
+                    </div>
+                    <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                </label>
+
+                <label class="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer border border-slate-200 transition">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="layer-idfs" checked class="rounded text-teal-600 focus:ring-teal-500 h-4 w-4">
+                        <span class="font-medium text-slate-700">Cuartos MDF / IDF</span>
+                    </div>
+                    <span class="w-3 h-3 rounded-full bg-teal-600"></span>
+                </label>
+            </div>
+
+            <!-- Ficha Técnica del Campus -->
+            <div class="border-t border-slate-200 pt-3 space-y-2">
+                <span class="text-slate-600 font-semibold block uppercase tracking-wider text-[10px]">Especificaciones Técnicas</span>
+                
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 font-mono text-[11px]">
+                    <div class="flex justify-between"><span class="text-slate-500">MDF Principal:</span><span class="font-semibold text-slate-800">Edif. B (3×4m)</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Fibra Edif. Gobierno:</span><span class="font-semibold text-blue-600">70 m</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Fibra Biblioteca:</span><span class="font-semibold text-blue-600">70 m</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Fibra Edificio A:</span><span class="font-semibold text-blue-600">45 m</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Fibra Edificio C:</span><span class="font-semibold text-blue-600">60 m</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Fibra Talleres:</span><span class="font-semibold text-blue-600">90 m</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Cable Horizontal:</span><span class="font-semibold text-slate-800">UTP CAT 6 (&lt;90m)</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Puesta a Tierra:</span><span class="font-semibold text-slate-800">&lt; 5 Ω</span></div>
+                </div>
+            </div>
+
+            <!-- Descripción Técnica y Conexiones -->
+            <div class="border-t border-slate-200 pt-3 space-y-2">
+                <span class="text-slate-600 font-semibold block uppercase tracking-wider text-[10px]">Descripción de Conexiones</span>
+                
+                <div class="bg-blue-50/70 p-3 rounded-xl border border-blue-100 space-y-2 text-[11px] text-slate-700 leading-relaxed">
+                    <p><strong><i class="fa-solid fa-server text-blue-600 mr-1"></i> MDF Principal (Edif. B):</strong> Núcleo central de la red del campus. Aloja los switches principales, patch panels y el enrutador principal de salida a internet.</p>
+                    <p><strong><i class="fa-solid fa-network-wired text-blue-600 mr-1"></i> Backbone de Fibra Óptica:</strong> Enlaces troncales multimodo en topología estrella que conectan el MDF del Edificio B con los cuartos IDF de los demás edificios (de 45m a 90m).</p>
+                    <p><strong><i class="fa-solid fa-road text-amber-600 mr-1"></i> Canalizaciones y Registros:</strong> Tubería conduit de 2 pulgadas subterránea con registros de inspección estratégicos para proteger y facilitar el tiro de cables.</p>
+                    <p><strong><i class="fa-solid fa-wifi text-emerald-600 mr-1"></i> Cableado Horizontal y Wi-Fi:</strong> Cable UTP Cat 6 desde los IDF hacia cada área de trabajo y aulas (con longitud menor a 90m), complementado con Access Points inalámbricos.</p>
+                </div>
+            </div>
+
+            <!-- Botones de Control de Cámara -->
+            <div class="border-t border-slate-200 pt-3 flex space-x-2">
+                <button id="btn-reset-cam" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-lg font-medium transition flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>Restablecer Vista</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-3 bg-slate-50 border-t border-slate-200 text-center text-[10px] text-slate-500 font-mono">
+            IPN - CET 1 "Walter Cross Buchanan" • 2026
+        </div>
+    </aside>
+
+    <!-- Leyenda Inferior Izquierda -->
+    <div class="absolute bottom-4 left-4 z-20 bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-lg border border-slate-200 text-[11px] space-y-1.5 hidden sm:block">
+        <div class="font-semibold text-slate-800 mb-1">Leyenda de Infraestructura</div>
+        <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded bg-blue-600 inline-block"></span><span class="text-slate-600">Backbone Fibra Óptica (Multimodo)</span></div>
+        <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span><span class="text-slate-600">Conduit Galv. 2" / Registros</span></div>
+        <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span><span class="text-slate-600">Access Point Wi-Fi &amp; Cobertura</span></div>
+        <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded bg-teal-600 inline-block"></span><span class="text-slate-600">Cuarto MDF / IDF de Telecom</span></div>
+    </div>
+
+    <!-- Script Principal de Three.js e Interfaz -->
+    <script>
+        const container = document.getElementById('canvas-container');
+        const labelsContainer = document.getElementById('labels-container');
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf1f5f9);
+
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 35;
+        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+        camera.position.set(50, 50, 50);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(40, 60, 40);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 200;
+        const bboxSize = 50;
+        dirLight.shadow.camera.left = -bboxSize;
+        dirLight.shadow.camera.right = bboxSize;
+        dirLight.shadow.camera.top = bboxSize;
+        dirLight.shadow.camera.bottom = -bboxSize;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.3);
+        fillLight.position.set(-40, 30, -40);
+        scene.add(fillLight);
+
+        const gridHelper = new THREE.GridHelper(100, 50, 0xcbd5e1, 0xe2e8f0);
+        gridHelper.position.y = -0.05;
+        scene.add(gridHelper);
+
+        const groundGeo = new THREE.PlaneGeometry(100, 100);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0xe8edf2, roughness: 0.9 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.1;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const backboneGroup = new THREE.Group();
+        const conduitGroup = new THREE.Group();
+        const wifiGroup = new THREE.Group();
+        const idfsGroup = new THREE.Group();
+
+        scene.add(backboneGroup);
+        scene.add(conduitGroup);
+        scene.add(wifiGroup);
+        scene.add(idfsGroup);
+
+        const labelElements = [];
+
+        function createBuilding(width, height, depth, color, roofColor, x, z, name, badgeText, badgeClass, hasWifi = false) {
+            const group = new THREE.Group();
+            
+            const geom = new THREE.BoxGeometry(width, height, depth);
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.6 });
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.y = height / 2;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            group.add(mesh);
+
+            const roofGeom = new THREE.BoxGeometry(width + 0.4, 0.4, depth + 0.4);
+            const roofMat = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.4 });
+            const roof = new THREE.Mesh(roofGeom, roofMat);
+            roof.position.y = height + 0.2;
+            roof.castShadow = true;
+            group.add(roof);
+
+            group.position.set(x, 0, z);
+            scene.add(group);
+
+            if (hasWifi) {
+                const wifiAnchor = new THREE.Group();
+                wifiAnchor.position.set(x, height + 0.6, z);
+                
+                const apGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.2, 16);
+                const apMat = new THREE.MeshStandardMaterial({ color: 0x059669, emissive: 0x047857, emissiveIntensity: 0.3 });
+                const apMesh = new THREE.Mesh(apGeo, apMat);
+                wifiAnchor.add(apMesh);
+
+                const covGeo = new THREE.RingGeometry(0.1, 7, 32);
+                const covMat = new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+                const covMesh = new THREE.Mesh(covGeo, covMat);
+                covMesh.rotation.x = -Math.PI / 2;
+                covMesh.position.y = -height - 0.5;
+                wifiAnchor.add(covMesh);
+
+                wifiGroup.add(wifiAnchor);
+            }
+
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'tech-label';
+            labelDiv.innerHTML = `${name} <span class="badge ${badgeClass}">${badgeText}</span>`;
+            labelsContainer.appendChild(labelDiv);
+
+            labelElements.push({
+                element: labelDiv,
+                position: new THREE.Vector3(x, height + 1.2, z)
+            });
+
+            return { group, x, z, height };
+        }
+
+        // EDIFICIOS (Edificio B es ahora el MDF Principal en z: 4):
+        const edGobierno = createBuilding(12, 5, 8, 0x94a3b8, 0x64748b, -14, -15, "Edificio de Gobierno", "IDF-Gob", "badge-gov", true);
+        const edBiblioteca = createBuilding(10, 4.5, 7, 0x94a3b8, 0x64748b, 22, -4, "Biblioteca Campus", "IDF-LIB", "badge-lib", true);
+        const edC = createBuilding(12, 5, 8, 0x94a3b8, 0x64748b, -12, 0, "Edificio C", "IDF-C (Aulas)", "badge-idf", true);
+        const edA = createBuilding(14, 5.5, 7, 0xcbd5e1, 0x94a3b8, 4, -4, "Edificio A", "IDF-A", "badge-idf", true);
+        const edB = createBuilding(14, 5.5, 7, 0xcbd5e1, 0x94a3b8, 4, 4, "Edificio B (MDF Principal)", "Core 3x4m", "badge-mdf", true);
+        const edTalleres = createBuilding(18, 6, 12, 0x64748b, 0x475569, -10, 16, "Talleres y Automatización", "IDF-T (Fibra 90m)", "badge-fiber", true);
+
+        // CONEXIONES Y FIBRA (Centralizadas desde Edificio B en 4, 4):
+        function createFiberLink(x1, z1, x2, z2, labelText) {
+            const points = [
+                new THREE.Vector3(x1, 0.2, z1),
+                new THREE.Vector3((x1+x2)/2, 0.2, (z1+z2)/2),
+                new THREE.Vector3(x2, 0.2, z2)
+            ];
+            const curve = new THREE.CatmullRomCurve3(points);
+            const geom = new THREE.TubeGeometry(curve, 32, 0.12, 8, false);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x2563eb });
+            const mesh = new THREE.Mesh(geom, mat);
+            backboneGroup.add(mesh);
+
+            const midX = (x1 + x2) / 2;
+            const midZ = (z1 + z2) / 2;
+            const distDiv = document.createElement('div');
+            distDiv.className = 'tech-label';
+            distDiv.style.backgroundColor = 'rgba(37, 99, 235, 0.9)';
+            distDiv.style.color = '#ffffff';
+            distDiv.innerHTML = `<i class="fa-solid fa-network-wired mr-1"></i> ${labelText}`;
+            labelsContainer.appendChild(distDiv);
+
+            labelElements.push({
+                element: distDiv,
+                position: new THREE.Vector3(midX, 0.8, midZ)
+            });
+        }
+
+        function createConduit(x1, z1, x2, z2) {
+            const points = [
+                new THREE.Vector3(x1, 0.1, z1),
+                new THREE.Vector3(x2, 0.1, z2)
+            ];
+            const geom = new THREE.TubeGeometry(new THREE.LineCurve3(points[0], points[1]), 16, 0.08, 8, false);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xd97706 });
+            const mesh = new THREE.Mesh(geom, mat);
+            conduitGroup.add(mesh);
+        }
+
+        // Enlaces desde el MDF Edificio B (4, 4):
+        createFiberLink(4, 4, -14, -15, "Fibra FO - 70m");
+        createConduit(4, 4, -14, -15);
+
+        createFiberLink(4, 4, 22, -4, "Fibra FO - 70m");
+        createConduit(4, 4, 22, -4);
+
+        createFiberLink(4, 4, 4, -4, "Fibra FO - 45m");
+        createConduit(4, 4, 4, -4);
+
+        createFiberLink(4, 4, -12, 0, "Fibra FO - 60m");
+        createConduit(4, 4, -12, 0);
+
+        createFiberLink(4, 4, -10, 16, "Fibra FO - 90m");
+        createConduit(4, 4, -10, 16);
+
+        function createManhole(x, z) {
+            const geom = new THREE.CylinderGeometry(0.4, 0.4, 0.08, 16);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5 });
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.set(x, 0.04, z);
+            conduitGroup.add(mesh);
+        }
+        createManhole(-5, -6);
+        createManhole(13, 0);
+        createManhole(4, 0);
+        createManhole(-4, 8);
+        createManhole(-3, 10);
+
+        function createIdfMarker(x, z) {
+            const geom = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x0d9488, emissive: 0x0f766e, emissiveIntensity: 0.4 });
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.set(x, 3.2, z);
+            idfsGroup.add(mesh);
+        }
+        createIdfMarker(4, 4);     // MDF Edificio B
+        createIdfMarker(4, -4);    // IDF Edificio A
+        createIdfMarker(-14, -15); // IDF Gobierno
+        createIdfMarker(22, -4);   // IDF Biblioteca
+        createIdfMarker(-12, 0);   // IDF C
+        createIdfMarker(-10, 16);  // IDF Talleres
+
+        // INTERACTIVIDAD Y CONTROLES:
+        document.getElementById('layer-backbone').addEventListener('change', (e) => { backboneGroup.visible = e.target.checked; });
+        document.getElementById('layer-conduit').addEventListener('change', (e) => { conduitGroup.visible = e.target.checked; });
+        document.getElementById('layer-wifi').addEventListener('change', (e) => { wifiGroup.visible = e.target.checked; });
+        document.getElementById('layer-idfs').addEventListener('change', (e) => { idfsGroup.visible = e.target.checked; });
+
+        document.getElementById('btn-reset-cam').addEventListener('click', () => {
+            camera.position.set(50, 50, 50);
+            camera.lookAt(0, 0, 0);
+            theta = Math.PI / 4;
+            phi = Math.PI / 3;
+            camera.zoom = 1;
+            camera.updateProjectionMatrix();
+        });
+
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let cameraRadius = 70;
+        let theta = Math.PI / 4;
+        let phi = Math.PI / 3;
+
+        container.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - previousMousePosition.x;
+            const deltaY = e.clientY - previousMousePosition.y;
+
+            theta -= deltaX * 0.008;
+            phi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, phi - deltaY * 0.008));
+
+            updateCameraPosition();
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        window.addEventListener('wheel', (e) => {
+            const zoomFactor = e.deltaY * 0.05;
+            camera.zoom = Math.max(0.6, Math.min(2.5, camera.zoom - zoomFactor * 0.05));
+            camera.updateProjectionMatrix();
+        });
+
+        function updateCameraPosition() {
+            camera.position.x = cameraRadius * Math.sin(phi) * Math.sin(theta);
+            camera.position.y = cameraRadius * Math.cos(phi);
+            camera.position.z = cameraRadius * Math.sin(phi) * Math.cos(theta);
+            camera.lookAt(0, 0, 0);
+        }
+
+        function updateLabels() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            labelElements.forEach(item => {
+                const vector = item.position.clone();
+                vector.project(camera);
+
+                const x = (vector.x *  0.5 + 0.5) * width;
+                const y = (vector.y * -0.5 + 0.5) * height;
+
+                if (vector.z > 1) {
+                    item.element.style.opacity = '0';
+                } else {
+                    item.element.style.opacity = '1';
+                    item.element.style.transform = `translate(-50%, -100%) translate(${x}px, ${y}px)`;
+                }
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+            updateLabels();
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.left = -d * aspect;
+            camera.right = d * aspect;
+            camera.top = d;
+            camera.bottom = -d;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
